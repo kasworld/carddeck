@@ -97,6 +97,9 @@ type Card struct {
 	deck *DeckType
 }
 
+func (c Card) IsJoker() bool {
+	return c.deck.IsJoker(c.v)
+}
 func (c Card) Suit() int {
 	return c.deck.Suit(c.v)
 }
@@ -140,6 +143,12 @@ func (s CardList) SortSuit() {
 }
 func (s CardList) SortNum() {
 	suits := func(p1, p2 *Card) bool {
+		if p1.IsJoker() && !p2.IsJoker() {
+			return false
+		}
+		if !p1.IsJoker() && p2.IsJoker() {
+			return true
+		}
 		if p1.Num() == p2.Num() {
 			return p1.Suit() < p2.Suit()
 		}
@@ -189,6 +198,13 @@ func NewCardStack() *CardStack {
 		cards: make(CardList, 0),
 		rnd:   rand.New(),
 	}
+}
+
+func NewShuffledSingleCardStack(dt *DeckType) *CardStack {
+	rtn := NewCardStack()
+	rtn.AppendCards(NewCards(dt))
+	rtn.Shuffle()
+	return rtn
 }
 
 type CardStack struct {
