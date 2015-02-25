@@ -2,6 +2,7 @@ package carddeck
 
 import (
 	"fmt"
+	"sort"
 	"sync"
 
 	"github.com/kasworld/rand"
@@ -26,7 +27,6 @@ var Deck13x4 = NewDeckType(
 var DeckRWTarot = NewDeckType(
 	[]string{"Sword", "Cup", "Wand", "Pentacle"},
 	[]string{"Ace", "2", "3", "4", "5", "6", "7", "8", "9", "10", "Page", "Knight", "Queen", "King"},
-
 	[]string{"0–The Fool",
 		"I–The Magician",
 		"II–The High Priestess",
@@ -97,8 +97,6 @@ type Card struct {
 	deck *DeckType
 }
 
-var CardEmpty = Card{-1, nil}
-
 func (c Card) Suit() int {
 	return c.deck.Suit(c.v)
 }
@@ -109,23 +107,92 @@ func (c Card) String() string {
 	return c.deck.ToStr(c.v)
 }
 
-func NewCards(dt *DeckType) []Card {
-	rtn := make([]Card, dt.suitCount*dt.numCount+dt.jokerCount)
+type By func(p1, p2 *Card) bool
+
+func (by By) Sort(cards []*Card) {
+	ps := &cardSorter{
+		cards: cards,
+		by:    by, // The Sort method's receiver is the function (closure) that defines the sort order.
+	}
+	sort.Sort(ps)
+}
+
+type cardSorter struct {
+	cards []*Card
+	by    func(p1, p2 *Card) bool // Closure used in the Less method.
+}
+
+func (s *cardSorter) Len() int {
+	return len(s.cards)
+}
+func (s *cardSorter) Swap(i, j int) {
+	s.cards[i], s.cards[j] = s.cards[j], s.cards[i]
+}
+func (s *cardSorter) Less(i, j int) bool {
+	return s.by(s.cards[i], s.cards[j])
+}
+
+func (s CardList) SortSuit() {
+	suits := func(p1, p2 *Card) bool {
+		return p1.v < p2.v
+	}
+	By(suits).Sort(s)
+}
+func (s CardList) SortNum() {
+	suits := func(p1, p2 *Card) bool {
+		if p1.Num() == p2.Num() {
+			return p1.Suit() < p2.Suit()
+		}
+		return p1.Num() < p2.Num()
+	}
+	By(suits).Sort(s)
+}
+
+type CardList []*Card
+
+func (s CardList) FindIndex(v int) int {
+	return sort.Search(len(s), func(i int) bool { return s[i].v >= v })
+}
+func (s CardList) Shuffle(rnd *rand.Rand) {
+	n := len(s)
+	for i := 0; i < n; i++ {
+		j := rnd.Intn(i + 1)
+		s[i], s[j] = s[j], s[i]
+	}
+}
+func (s *CardList) Append(c *Card) {
+	*s = append(*s, c)
+}
+func (s CardList) Add(cs CardList) CardList {
+	return append(s, cs...)
+}
+func (s *CardList) DrawByPos(i int) *Card {
+	if i >= len(*s) {
+		return nil
+	}
+	rtn := (*s)[i]
+	*s = append((*s)[:i], (*s)[i+1:]...)
+
+	return rtn
+}
+
+func NewCards(dt *DeckType) CardList {
+	rtn := make(CardList, dt.suitCount*dt.numCount+dt.jokerCount)
 	for i := 0; i < dt.suitCount*dt.numCount+dt.jokerCount; i++ {
-		rtn[i] = Card{i, dt}
+		rtn[i] = &Card{i, dt}
 	}
 	return rtn
 }
 
 func NewCardStack() *CardStack {
 	return &CardStack{
-		cards: make([]Card, 0),
+		cards: make(CardList, 0),
 		rnd:   rand.New(),
 	}
 }
 
 type CardStack struct {
-	cards []Card
+	cards CardList
 	rnd   *rand.Rand
 	pos   int
 	mutex sync.Mutex
@@ -135,7 +202,9 @@ func (cs CardStack) String() string {
 	return fmt.Sprintf("%v", cs.cards)
 }
 
-func (cs *CardStack) AppendCards(ncs []Card) {
+func (cs *CardStack) AppendCards(ncs CardList) {
+	cs.mutex.Lock()
+	defer cs.mutex.Unlock()
 	cs.cards = append(cs.cards, ncs...)
 }
 
@@ -151,19 +220,15 @@ func (cs *CardStack) Rewind() {
 func (cs *CardStack) Shuffle() {
 	cs.mutex.Lock()
 	defer cs.mutex.Unlock()
-	n := len(cs.cards)
-	for i := 0; i < n; i++ {
-		j := cs.rnd.Intn(i + 1)
-		cs.cards[i], cs.cards[j] = cs.cards[j], cs.cards[i]
-	}
+	cs.cards.Shuffle(cs.rnd)
 	cs.rewind()
 }
 
-func (cs *CardStack) DrawCard() Card {
+func (cs *CardStack) DrawCard() *Card {
 	cs.mutex.Lock()
 	defer cs.mutex.Unlock()
 	if cs.Empty() {
-		return CardEmpty
+		return nil
 	}
 	rtn := cs.cards[cs.pos]
 	cs.pos++
