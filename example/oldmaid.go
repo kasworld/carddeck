@@ -66,22 +66,11 @@ func (p Player) String() string {
 	return fmt.Sprintf("%v:%v", p.name, p.CardList)
 }
 
-func doMain(args []string) {
-
-	g := NewGame(4)
-	g.Init()
-	g.Print()
-	for len(g.players) > 1 {
-		g.Step()
-		// g.Print()
-		// fmt.Println()
-	}
-	g.Print()
-}
-
 type OldMaidGame struct {
 	players   []*Player
 	discarded carddeck.CardList
+	played    []*Player
+	rnd       *rand.Rand
 }
 
 func NewGame(n int) *OldMaidGame {
@@ -92,11 +81,17 @@ func NewGame(n int) *OldMaidGame {
 	return &OldMaidGame{
 		players:   players,
 		discarded: make(carddeck.CardList, 0),
+		played:    make([]*Player, 0),
+		rnd:       rand.New(),
 	}
 }
 func (g *OldMaidGame) Init() {
 	// prepare playing deck
-	cs := carddeck.NewShuffledSingleCardStack(carddeck.Deck13x4j1)
+	cl := carddeck.NewCardList(carddeck.Deck13x4)
+	cl.DrawByPos(g.rnd.Intn(len(cl)))
+	cs := carddeck.NewCardStack()
+	cs.AppendCards(cl)
+	cs.Shuffle()
 
 	// distribute card to player
 	for i := 0; ; i++ {
@@ -106,14 +101,14 @@ func (g *OldMaidGame) Init() {
 		}
 		g.players[i%len(g.players)].Append(cd)
 	}
-	for i, v := range g.players {
-		fmt.Printf("%v:%v\n", i, v)
+	for _, v := range g.players {
+		fmt.Printf("%v", v)
 		v.removeSameNum(&g.discarded)
+		fmt.Printf(" %v\n", v)
 	}
 }
 
 func (g *OldMaidGame) Print() {
-	// player arrange hands
 	for _, v := range g.players {
 		v.SortNum()
 		fmt.Printf("%v\n", v)
@@ -125,7 +120,7 @@ func (g *OldMaidGame) RemovePlayer(i int) {
 		log.Warn("invalid player number %v %v", i, len(g.players))
 		return
 	}
-
+	g.played = append(g.played, g.players[i])
 	g.players = append(g.players[:i], g.players[i+1:]...)
 }
 
@@ -149,4 +144,18 @@ func (g *OldMaidGame) Step() {
 		// fmt.Printf("%v:%v ", i, srcplayer)
 	}
 	// fmt.Println()
+}
+
+func doMain(args []string) {
+	g := NewGame(6)
+	g.Init()
+	g.Print()
+	for len(g.players) > 1 {
+		g.Step()
+	}
+	g.RemovePlayer(0)
+	fmt.Printf("%v\n", g.discarded)
+	for _, v := range g.played {
+		fmt.Printf("%v\n", v)
+	}
 }
