@@ -8,7 +8,7 @@ import (
 
 type By func(p1, p2 *Card) bool
 
-func (by By) Sort(cards []*Card) {
+func (by By) Sort(cards CardList) {
 	ps := &cardSorter{
 		cards: cards,
 		by:    by, // The Sort method's receiver is the function (closure) that defines the sort order.
@@ -17,7 +17,7 @@ func (by By) Sort(cards []*Card) {
 }
 
 type cardSorter struct {
-	cards []*Card
+	cards CardList
 	by    func(p1, p2 *Card) bool // Closure used in the Less method.
 }
 
