@@ -1,18 +1,20 @@
 package carddeck
 
+//"♠♣♥♦♡♢♤♧☺☻"
+
 var Deck13x4j2 = NewDeckType(
-	[]string{"Spades", "Hearts", "Diamonds", "Clubs"},
+	[]string{"♠", "♡", "♢", "♣"},
 	[]string{"A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"},
-	[]string{"Major-Joker", "minor-joker"},
+	[]string{"☻", "☺"},
 )
 var Deck13x4j1 = NewDeckType(
-	[]string{"Spades", "Hearts", "Diamonds", "Clubs"},
+	[]string{"♠", "♡", "♢", "♣"},
 	[]string{"A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"},
-	[]string{"Joker"},
+	[]string{"☻"},
 )
 
 var Deck13x4 = NewDeckType(
-	[]string{"Spades", "Hearts", "Diamonds", "Clubs"},
+	[]string{"♠", "♡", "♢", "♣"},
 	[]string{"A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"},
 	nil,
 )
